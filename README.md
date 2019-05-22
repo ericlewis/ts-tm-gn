@@ -1,3 +1,3 @@
 # ts-tm-gn
 
-gen turbomodus from typescript
+gen turbomodules from typescript interfaces, this kinda works.

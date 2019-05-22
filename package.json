@@ -33,6 +33,7 @@
     "clean": "trash build test",
     "all": "run-s reset test cov:check doc:html",
     "prepare-release": "run-s all version doc:publish",
+    "start": "node build/main/index.js",
     "preinstall": "node -e \"if(process.env.npm_execpath.indexOf('yarn') === -1) throw new Error('ts-tm-gn must be installed with Yarn: https://yarnpkg.com/')\""
   },
   "scripts-info": {
@@ -52,7 +53,8 @@
     "node": ">=8.9"
   },
   "dependencies": {
-    "sha.js": "^2.4.11"
+    "ts-morph": "^2.1.0",
+    "yargs": "^13.2.4"
   },
   "devDependencies": {
     "ava": "1.0.0-beta.7",
