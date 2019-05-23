@@ -1,4 +1,4 @@
-function getType(type) {
+function getType(type, typeArg?: string) {
   switch (type) {
     case 'number':
       return 'double';
@@ -10,35 +10,12 @@ function getType(type) {
       return 'NSDictionary *';
     case 'void':
       return 'void';
+    case 'array':
+      return `NSArray<${getType(typeArg)}> *`;
+
     default:
-      return 'MISSINGNO';
+      return 'MISSINGNO_' + type;
   }
-}
-
-function makeParams(parameters) {
-  if (parameters.length > 0) {
-    return parameters
-      .map(({ name, type }, idx) => {
-        if (idx === 0) {
-          return `:(${getType(type)})${name}`;
-        } else {
-          return ` ${name}:(${getType(type)})${name}`;
-        }
-      })
-      .join('');
-  }
-
-  return '';
-}
-
-export function makeSpecFunctions(functions) {
-  return functions
-    .map(({ returnType, methodName, parameters }) => {
-      return `- (${getType(returnType)})${methodName}${makeParams(
-        parameters
-      )};\n`;
-    })
-    .join('');
 }
 
 export function invokeReturnType(type) {
@@ -53,10 +30,39 @@ export function invokeReturnType(type) {
       return 'ObjectKind';
     case 'void':
       return 'VoidKind';
+    case 'array':
+      return 'ArrayKind';
 
     default:
-      return 'MISSINGNO';
+      return 'MISSINGNO_' + type;
   }
+}
+
+function makeParams(parameters) {
+  if (parameters.length > 0) {
+    return parameters
+      .map(({ name, type, typeArg }, idx) => {
+        if (idx === 0) {
+          return `:(${getType(type, typeArg)})${name}`;
+        } else {
+          return ` ${name}:(${getType(type, typeArg)})${name}`;
+        }
+      })
+      .join('');
+  }
+
+  return '';
+}
+
+export function makeSpecFunctions(functions) {
+  return functions
+    .map(({ returnType, returnTypeArg, methodName, parameters }) => {
+      return `- (${getType(
+        returnType,
+        returnTypeArg
+      )})${methodName}${makeParams(parameters)};\n`;
+    })
+    .join('');
 }
 
 export function makeSelectorParams(parameters) {
@@ -84,7 +90,7 @@ export function makeMethodMap(name, functions) {
 
 export function makeMethodScaffolding(functions) {
   return functions
-    .map(({ methodName, parameters, returnType }) => {
+    .map(({ methodName, parameters, returnType, returnTypeArg }) => {
       return `
 ${
   returnType === 'void'
@@ -93,11 +99,17 @@ ${
 }(${
         parameters.length > 0
           ? `${
-              returnType === 'void' ? '' : `${getType(returnType)}, `
+              returnType === 'void'
+                ? ''
+                : `${getType(returnType, returnTypeArg)}, `
             }${methodName}:(${getType(
-              parameters.shift().type
+              parameters[0].type,
+              parameters[0].typeArg
             )})arg${parameters
-              .map(({ name, type }) => ` ${name}:(${getType(type)})${name}`)
+              .map(
+                ({ name, type, typeArg }) =>
+                  ` ${name}:(${getType(type, typeArg)})${name}`
+              )
               .join('')}`
           : methodName
       })
