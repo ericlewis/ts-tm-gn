@@ -69,7 +69,7 @@ try {
           );
 
           // recursively build the types returned
-          function constructTypes(pt: Type, name?: string) {
+          function constructTypes(pt: Type, name?: string, optional?: boolean) {
             if (isArray(pt) && pt.getTypeArguments().length > 0) {
               return {
                 name,
@@ -77,14 +77,16 @@ try {
                 // this maybe should be mapped instead, for when we wanna handle dictionaries
                 argTypes: pt
                   .getTypeArguments()
-                  .map(type => constructTypes(type))
+                  .map(type => constructTypes(type)),
+                optional
               };
             }
 
             return {
               name,
               type: pt.getText(),
-              argTypes: []
+              argTypes: [],
+              optional
             };
           }
 
@@ -93,8 +95,11 @@ try {
             const paramDeclaration = param.getValueDeclaration() as ParameterDeclaration;
             const paramType = paramDeclaration.getType();
             const paramSymbol = paramDeclaration.getSymbol();
-            // TODO: we need this paramDeclaration.isOptional(), lets change construct to accept a declaration
-            return constructTypes(paramType, paramSymbol.getName());
+            return constructTypes(
+              paramType,
+              paramSymbol.getName(),
+              paramDeclaration.isOptional()
+            );
           });
           const returnType = constructTypes(signature.getReturnType());
           return { name, parameters, returnType };
