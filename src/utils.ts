@@ -1,4 +1,4 @@
-function getType(type) {
+function getNativeType(type) {
   switch (type.type) {
     case 'number':
       return 'double';
@@ -11,7 +11,7 @@ function getType(type) {
     case 'void':
       return 'void';
     case 'array':
-      return `NSArray<${type.argTypes.map(getType)}> *`;
+      return `NSArray<${type.argTypes.map(getNativeType)}> *`;
 
     default:
       console.error('missing type', type);
@@ -40,26 +40,11 @@ export function invokeReturnType(type) {
   }
 }
 
-function makeParams(parameters) {
-  if (parameters.length > 0) {
-    return parameters
-      .map(({ name, type }, idx) => {
-        if (idx === 0) {
-          return `:(${getType(type)})${name}`;
-        } else {
-          return ` ${name}:(${getType(type)})${name}`;
-        }
-      })
-      .join('');
-  }
-
-  return '';
-}
-
 export function makeSpecFunctions(functions) {
   return functions
-    .map(({ returnType, methodName, parameters }) => {
-      return `- (${getType(returnType)})${methodName}${makeParams(
+    .map(({ returnType, name, parameters }) => {
+      return `- (${getNativeType(returnType)})${CONSTRUCT_METHOD(
+        name,
         parameters
       )};\n`;
     })
@@ -89,7 +74,7 @@ function EXPORT_METHOD(type) {
 }
 
 function CONSTRUCT_RETURN(type) {
-  return requiresReturnResult(type) ? `${getType(type)}, ` : '';
+  return requiresReturnResult(type) ? `${getNativeType(type)}, ` : '';
 }
 
 function CONSTRUCT_PARAMS(params) {
@@ -97,21 +82,26 @@ function CONSTRUCT_PARAMS(params) {
     .map((type, idx) => {
       const { name } = type;
       if (idx === 0) {
-        return `:(${getType(type)})${name}`;
+        return `:(${getNativeType(type)})${name}`;
       }
 
-      return `${name}:(${getType(type)})${name}`;
+      return `${name}:(${getNativeType(type)})${name}`;
     })
     .join(' ');
+}
+
+function CONSTRUCT_METHOD(name, parameters) {
+  return `${name}${CONSTRUCT_PARAMS(parameters)}`;
 }
 
 export function makeMethodScaffolding(functions) {
   return functions
     .map(({ name, returnType, parameters }) => {
       return `
-${EXPORT_METHOD(returnType)}(${CONSTRUCT_RETURN(
-        returnType
-      )}${name}${CONSTRUCT_PARAMS(parameters)})
+${EXPORT_METHOD(returnType)}(${CONSTRUCT_RETURN(returnType)}${CONSTRUCT_METHOD(
+        name,
+        parameters
+      )})
 {
   // Implement method
 }

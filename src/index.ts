@@ -1,7 +1,6 @@
 import assert from 'assert';
 import { Project, Type } from 'ts-morph';
-import { ModuleSpecMM } from './templates';
-// import { ModuleSpec, ModuleSpecMM, RCTModule, RCTModuleH } from './templates';
+import { ModuleSpec, ModuleSpecMM, RCTModule, RCTModuleH } from './templates';
 
 try {
   const argv = require('yargs')
@@ -106,19 +105,16 @@ try {
       const name = argv.name;
       // these names should really belong to the templates
       const outputs: ReadonlyArray<any> = [
-        // [`RCTNative${name}Spec.h`, ModuleSpec(name, data)],
-        [
-          `RCTNative${name}Spec.mm`,
-          ModuleSpecMM(name, turboModuleInterfaceMethods)
-        ]
-        // [`RCT${name}.h`, RCTModuleH(name)],
-        // [`RCT${name}.mm`, RCTModule(name, turboModuleInterfaceMethods)]
+        ModuleSpec(name, turboModuleInterfaceMethods),
+        ModuleSpecMM(name, turboModuleInterfaceMethods),
+        RCTModuleH(name),
+        RCTModule(name, turboModuleInterfaceMethods)
       ];
 
       if (argv.output) {
-        outputs.map(([n]) => console.log(n));
+        outputs.map(({ filename }) => console.log(filename));
       } else {
-        outputs.map(([, o]) => console.log(o));
+        outputs.map(({ output }) => console.log(output));
       }
     }
   });

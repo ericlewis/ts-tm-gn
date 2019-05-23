@@ -5,7 +5,9 @@ import {
   makeSpecFunctions
 } from './utils';
 
-export const ModuleSpec = (name, functions) => `
+export const ModuleSpec = (name, functions) => ({
+  filename: `RCTNative${name}Spec.h`,
+  output: `
 /**
  * RCTNative${name}Spec.h
  * 
@@ -54,9 +56,12 @@ public:
 } // namespace facebook
 
 #endif
-`;
+`
+});
 
-export const ModuleSpecMM = (name, methods) => `
+export const ModuleSpecMM = (name, methods) => ({
+  filename: `RCTNative${name}Spec.mm`,
+  output: `
 /**
  * RCTNative${name}Spec.mm
  * 
@@ -80,9 +85,12 @@ Native${name}SpecJSI::Native${name}SpecJSI(id<RCTTurboModule> instance, std::sha
 } // namespace facebook
 
 #endif
-`;
+`
+});
 
-export const RCTModuleH = name => `
+export const RCTModuleH = name => ({
+  filename: `RCT${name}.h`,
+  output: `
 /**
  * RCT${name}.h
  * 
@@ -96,9 +104,12 @@ export const RCTModuleH = name => `
 @interface RCT${name} : NSObject<Native${name}Spec>
 
 @end
-`;
+`
+});
 
-export const RCTModule = (name, functions) => `
+export const RCTModule = (name, functions) => ({
+  filename: `RCT${name}.mm`,
+  output: `
 /**
  * RCT${name}.mm
  * 
@@ -135,4 +146,5 @@ RCT_EXPORT_MODULE()
 ${makeMethodScaffolding(functions)}
 
 @end
-`;
+`
+});
