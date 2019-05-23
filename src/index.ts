@@ -1,6 +1,6 @@
 import assert from 'assert';
 import fs from 'fs';
-import { Project, Type } from 'ts-morph';
+import { ParameterDeclaration, Project, Type } from 'ts-morph';
 import { ModuleSpec, ModuleSpecMM, RCTModule, RCTModuleH } from './templates';
 
 try {
@@ -90,12 +90,11 @@ try {
 
           const signature = signatures[0];
           const parameters = signature.getParameters().map(param => {
-            const paramDeclaration = param.getValueDeclaration();
+            const paramDeclaration = param.getValueDeclaration() as ParameterDeclaration;
             const paramType = paramDeclaration.getType();
-            return constructTypes(
-              paramType,
-              paramDeclaration.getSymbol().getName()
-            );
+            const paramSymbol = paramDeclaration.getSymbol();
+            // TODO: we need this paramDeclaration.isOptional(), lets change construct to accept a declaration
+            return constructTypes(paramType, paramSymbol.getName());
           });
           const returnType = constructTypes(signature.getReturnType());
           return { name, parameters, returnType };
