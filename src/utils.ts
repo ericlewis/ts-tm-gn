@@ -9,9 +9,14 @@ function getNativeType(type) {
     case 'object':
       return 'NSDictionary *';
     case 'void':
+    case 'promise':
       return 'void';
+    case 'any':
+      return 'id<NSObject>';
     case 'array':
       return `NSArray<${type.argTypes.map(getNativeType)}> *`;
+    case 'callback':
+      return 'RCTResponseSenderBlock';
 
     default:
       console.error('missing type', type);
@@ -28,11 +33,15 @@ export function invokeReturnType(type) {
     case 'string':
       return 'StringKind';
     case 'object':
+    case 'any':
       return 'ObjectKind';
     case 'void':
+    case 'callback':
       return 'VoidKind';
     case 'array':
       return 'ArrayKind';
+    case 'promise':
+      return 'PromiseKind';
 
     default:
       console.error('missing type', type);
@@ -45,7 +54,8 @@ export function makeSpecFunctions(functions) {
     .map(({ returnType, name, parameters }) => {
       return `- (${getNativeType(returnType)})${CONSTRUCT_METHOD(
         name,
-        parameters
+        parameters,
+        returnType
       )};\n`;
     })
     .join('');
@@ -53,11 +63,12 @@ export function makeSpecFunctions(functions) {
 
 export function makeMethodMap(moduleName, functions) {
   return functions
-    .map(({ name, parameters }) => {
+    .map(({ name, returnType, parameters }) => {
       return `
-  methodMap_["${name}"] = MethodMetadata {${
-        parameters.length
-      }, __hostFunction_Native${moduleName}SpecJSI_${name}};`;
+  methodMap_["${name}"] = MethodMetadata {${parameters.length +
+        (returnType.type === 'promise'
+          ? 2
+          : 0)}, __hostFunction_Native${moduleName}SpecJSI_${name}};`;
     })
     .join('')
     .slice(3); // <--- this just makes the output look nicer
@@ -90,8 +101,14 @@ function CONSTRUCT_PARAMS(params) {
     .join(' ');
 }
 
-function CONSTRUCT_METHOD(name, parameters) {
-  return `${name}${CONSTRUCT_PARAMS(parameters)}`;
+function CONSTRUCT_METHOD(name, parameters, returnType) {
+  return `${name}${CONSTRUCT_PARAMS(parameters)}${
+    returnType.type === 'promise'
+      ? `${
+          parameters.length > 0 ? ' resolve:' : ':'
+        }(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject`
+      : ''
+  }`;
 }
 
 export function makeMethodScaffolding(functions) {
@@ -100,7 +117,8 @@ export function makeMethodScaffolding(functions) {
       return `
 ${EXPORT_METHOD(returnType)}(${CONSTRUCT_RETURN(returnType)}${CONSTRUCT_METHOD(
         name,
-        parameters
+        parameters,
+        returnType
       )})
 {
   // Implement method

@@ -80,6 +80,25 @@ try {
                   .map(type => constructTypes(type)),
                 optional
               };
+            } else if (
+              pt.getSymbol() &&
+              pt.getSymbol().getEscapedName() === 'Promise'
+            ) {
+              return {
+                name,
+                type: 'promise',
+                // this maybe should be mapped instead, for when we wanna handle dictionaries
+                argTypes: pt
+                  .getTypeArguments()
+                  .map(type => constructTypes(type)),
+                optional
+              };
+            } else if (pt.isAnonymous()) {
+              return {
+                name,
+                type: 'callback',
+                argTypes: []
+              };
             }
 
             return {
