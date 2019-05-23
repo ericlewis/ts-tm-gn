@@ -1,4 +1,5 @@
 import assert from 'assert';
+import fs from 'fs';
 import { Project, Type } from 'ts-morph';
 import { ModuleSpec, ModuleSpecMM, RCTModule, RCTModuleH } from './templates';
 
@@ -103,16 +104,21 @@ try {
       assert(turboModuleInterfaceMethods.length > 0, 'No valid methods found');
 
       const name = argv.name;
-      // these names should really belong to the templates
+
+      // iOS
       const outputs: ReadonlyArray<any> = [
         ModuleSpec(name, turboModuleInterfaceMethods),
         ModuleSpecMM(name, turboModuleInterfaceMethods),
+
+        // Optional-ish
         RCTModuleH(name),
         RCTModule(name, turboModuleInterfaceMethods)
       ];
 
       if (argv.output) {
-        outputs.map(({ filename }) => console.log(filename));
+        outputs.forEach(({ filename, output }) =>
+          fs.writeFileSync(`./${filename}`, output)
+        );
       } else {
         outputs.map(({ output }) => console.log(output));
       }
