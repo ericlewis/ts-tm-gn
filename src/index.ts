@@ -1,5 +1,6 @@
 import assert from 'assert';
 import { Project, Type } from 'ts-morph';
+import { ModuleSpecMM } from './templates';
 // import { ModuleSpec, ModuleSpecMM, RCTModule, RCTModuleH } from './templates';
 
 try {
@@ -68,18 +69,22 @@ try {
           );
 
           // recursively build the types returned
-          function constructTypes(pt: Type) {
+          function constructTypes(pt: Type, name?: string) {
             if (isArray(pt) && pt.getTypeArguments().length > 0) {
               return {
+                name,
                 type: 'array',
                 // this maybe should be mapped instead, for when we wanna handle dictionaries
-                argTypes: pt.getTypeArguments().map(constructTypes)
+                argTypes: pt
+                  .getTypeArguments()
+                  .map(type => constructTypes(type))
               };
             }
 
             return {
+              name,
               type: pt.getText(),
-              argTypes: null
+              argTypes: []
             };
           }
 
@@ -87,28 +92,34 @@ try {
           const parameters = signature.getParameters().map(param => {
             const paramDeclaration = param.getValueDeclaration();
             const paramType = paramDeclaration.getType();
-            return constructTypes(paramType);
+            return constructTypes(
+              paramType,
+              paramDeclaration.getSymbol().getName()
+            );
           });
           const returnType = constructTypes(signature.getReturnType());
           return { name, parameters, returnType };
         });
 
-      console.log(turboModuleInterfaceMethods[0].parameters[0].argTypes);
       assert(turboModuleInterfaceMethods.length > 0, 'No valid methods found');
-      // const name = argv.name;
-      // // these names should really belong to the templates
-      // const outputs: ReadonlyArray<any> = [
-      //   [`RCTNative${name}Spec.h`, ModuleSpec(name, data)],
-      //   [`RCTNative${name}Spec.mm`, ModuleSpecMM(name, data)],
-      //   [`RCT${name}.h`, RCTModuleH(name)],
-      //   [`RCT${name}.mm`, RCTModule(name, data)]
-      // ];
 
-      // if (argv.output) {
-      //   outputs.map(([n]) => console.log(n));
-      // } else {
-      //   outputs.map(([, o]) => console.log(o));
-      // }
+      const name = argv.name;
+      // these names should really belong to the templates
+      const outputs: ReadonlyArray<any> = [
+        // [`RCTNative${name}Spec.h`, ModuleSpec(name, data)],
+        [
+          `RCTNative${name}Spec.mm`,
+          ModuleSpecMM(name, turboModuleInterfaceMethods)
+        ]
+        // [`RCT${name}.h`, RCTModuleH(name)],
+        // [`RCT${name}.mm`, RCTModule(name, turboModuleInterfaceMethods)]
+      ];
+
+      if (argv.output) {
+        outputs.map(([n]) => console.log(n));
+      } else {
+        outputs.map(([, o]) => console.log(o));
+      }
     }
   });
 } catch (error) {

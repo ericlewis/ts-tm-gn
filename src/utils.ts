@@ -1,5 +1,5 @@
-function getType(type, typeArg?: string) {
-  switch (type) {
+function getType(type) {
+  switch (type.type) {
     case 'number':
       return 'double';
     case 'boolean':
@@ -11,15 +11,16 @@ function getType(type, typeArg?: string) {
     case 'void':
       return 'void';
     case 'array':
-      return `NSArray<${getType(typeArg)}> *`;
+      return `NSArray<${type.argTypes.map(getType)}> *`;
 
     default:
-      return 'MISSINGNO_' + type;
+      console.error('missing type', type);
+      return '';
   }
 }
 
 export function invokeReturnType(type) {
-  switch (type) {
+  switch (type.type) {
     case 'boolean':
       return 'BooleanKind';
     case 'number':
@@ -34,18 +35,19 @@ export function invokeReturnType(type) {
       return 'ArrayKind';
 
     default:
-      return 'MISSINGNO_' + type;
+      console.error('missing type', type);
+      return '';
   }
 }
 
 function makeParams(parameters) {
   if (parameters.length > 0) {
     return parameters
-      .map(({ name, type, typeArg }, idx) => {
+      .map(({ name, type }, idx) => {
         if (idx === 0) {
-          return `:(${getType(type, typeArg)})${name}`;
+          return `:(${getType(type)})${name}`;
         } else {
-          return ` ${name}:(${getType(type, typeArg)})${name}`;
+          return ` ${name}:(${getType(type)})${name}`;
         }
       })
       .join('');
@@ -56,11 +58,63 @@ function makeParams(parameters) {
 
 export function makeSpecFunctions(functions) {
   return functions
-    .map(({ returnType, returnTypeArg, methodName, parameters }) => {
-      return `- (${getType(
-        returnType,
-        returnTypeArg
-      )})${methodName}${makeParams(parameters)};\n`;
+    .map(({ returnType, methodName, parameters }) => {
+      return `- (${getType(returnType)})${methodName}${makeParams(
+        parameters
+      )};\n`;
+    })
+    .join('');
+}
+
+export function makeMethodMap(name, functions) {
+  return functions
+    .map(({ methodName, parameters }) => {
+      return `
+    methodMap_["${methodName}"] = MethodMetadata {${
+        parameters.length
+      }, __hostFunction_Native${name}SpecJSI_${methodName}};\n`.substring(1);
+    })
+    .join('');
+}
+
+function requiresReturnResult(o) {
+  return o.type !== 'void' && o.type !== 'promise';
+}
+
+function EXPORT_METHOD(type) {
+  return requiresReturnResult(type)
+    ? 'RCT_EXPORT_SYNCHRONOUS_TYPED_METHOD'
+    : 'RCT_EXPORT_METHOD';
+}
+
+function CONSTRUCT_RETURN(type) {
+  return requiresReturnResult(type) ? `${getType(type)}, ` : '';
+}
+
+function CONSTRUCT_PARAMS(params) {
+  return params
+    .map((type, idx) => {
+      const { name } = type;
+      if (idx === 0) {
+        return `:(${getType(type)})${name}`;
+      }
+
+      return `${name}:(${getType(type)})${name}`;
+    })
+    .join(' ');
+}
+
+export function makeMethodScaffolding(functions) {
+  return functions
+    .map(({ name, returnType, parameters }) => {
+      return `
+${EXPORT_METHOD(returnType)}(${CONSTRUCT_RETURN(
+        returnType
+      )}${name}${CONSTRUCT_PARAMS(parameters)})
+{
+  // Implement method
+}
+      `;
     })
     .join('');
 }
@@ -77,63 +131,19 @@ export function makeSelectorParams(parameters) {
     .join('');
 }
 
-export function makeMethodMap(name, functions) {
-  return functions
-    .map(({ methodName, parameters }) => {
-      return `
-    methodMap_["${methodName}"] = MethodMetadata {${
-        parameters.length
-      }, __hostFunction_Native${name}SpecJSI_${methodName}};\n`.substring(1);
-    })
+export const createHostFunctions = (moduleName: string, methods) => {
+  return methods
+    .map(
+      ({ name, returnType, parameters }) => `
+static facebook::jsi::Value __hostFunction_Native${moduleName}SpecJSI_${name}(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
+  return static_cast<ObjCTurboModule &>(turboModule)
+      .invokeObjCMethod(rt, ${invokeReturnType(
+        returnType
+      )}, "${name}", @selector(${name}${makeSelectorParams(
+        parameters
+      )}), args, count);
+}
+      `
+    )
     .join('');
-}
-
-export function makeMethodScaffolding(functions) {
-  return functions
-    .map(({ methodName, parameters, returnType, returnTypeArg }) => {
-      return `
-${
-  returnType === 'void'
-    ? 'RCT_EXPORT_METHOD'
-    : 'RCT_EXPORT_SYNCHRONOUS_TYPED_METHOD'
-}(${
-        parameters.length > 0
-          ? `${
-              returnType === 'void'
-                ? ''
-                : `${getType(returnType, returnTypeArg)}, `
-            }${methodName}:(${getType(
-              parameters[0].type,
-              parameters[0].typeArg
-            )})arg${parameters
-              .map(
-                ({ name, type, typeArg }) =>
-                  ` ${name}:(${getType(type, typeArg)})${name}`
-              )
-              .join('')}`
-          : methodName
-      })
-{
-  // Implement method
-}
-      `;
-    })
-    .join('');
-}
-
-export const createHostFunctions = (name: string) => ({
-  methodName,
-  returnType,
-  parameters
-}) => {
-  return `
-static facebook::jsi::Value __hostFunction_Native${name}SpecJSI_${methodName}(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
-    return static_cast<ObjCTurboModule &>(turboModule)
-        .invokeObjCMethod(rt, ${invokeReturnType(
-          returnType
-        )}, "${methodName}", @selector(${methodName}${makeSelectorParams(
-    parameters
-  )}), args, count);
-}
-    `;
 };

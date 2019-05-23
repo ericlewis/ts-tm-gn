@@ -1,6 +1,5 @@
 import {
   createHostFunctions,
-  makeMethodMap,
   makeMethodScaffolding,
   makeSpecFunctions
 } from './utils';
@@ -69,12 +68,11 @@ export const ModuleSpecMM = (name, functions) => `
 
 namespace facebook {
 namespace react {
-
-${functions.map(createHostFunctions(name)).join('')}
+${createHostFunctions(name, functions)}
 
 Native${name}SpecJSI::Native${name}SpecJSI(id<RCTTurboModule> instance, std::shared_ptr<JSCallInvoker> jsInvoker)
     : ObjCTurboModule("${name}", instance, jsInvoker) {
-${makeMethodMap(name, functions)}
+  ${/*makeMethodMap(name, functions)*/ 'TODO'}
 }
 
 } // namespace react
