@@ -1,5 +1,6 @@
 import {
   createHostFunctions,
+  makeMethodMap,
   makeMethodScaffolding,
   makeSpecFunctions
 } from './utils';
@@ -55,7 +56,7 @@ public:
 #endif
 `;
 
-export const ModuleSpecMM = (name, functions) => `
+export const ModuleSpecMM = (name, methods) => `
 /**
  * RCTNative${name}Spec.mm
  * 
@@ -68,11 +69,11 @@ export const ModuleSpecMM = (name, functions) => `
 
 namespace facebook {
 namespace react {
-${createHostFunctions(name, functions)}
+${createHostFunctions(name, methods)}
 
 Native${name}SpecJSI::Native${name}SpecJSI(id<RCTTurboModule> instance, std::shared_ptr<JSCallInvoker> jsInvoker)
     : ObjCTurboModule("${name}", instance, jsInvoker) {
-  ${/*makeMethodMap(name, functions)*/ 'TODO'}
+  ${makeMethodMap(name, methods)}
 }
 
 } // namespace react

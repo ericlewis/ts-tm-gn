@@ -66,15 +66,16 @@ export function makeSpecFunctions(functions) {
     .join('');
 }
 
-export function makeMethodMap(name, functions) {
+export function makeMethodMap(moduleName, functions) {
   return functions
-    .map(({ methodName, parameters }) => {
+    .map(({ name, parameters }) => {
       return `
-    methodMap_["${methodName}"] = MethodMetadata {${
+  methodMap_["${name}"] = MethodMetadata {${
         parameters.length
-      }, __hostFunction_Native${name}SpecJSI_${methodName}};\n`.substring(1);
+      }, __hostFunction_Native${moduleName}SpecJSI_${name}};`;
     })
-    .join('');
+    .join('')
+    .slice(3); // <--- this just makes the output look nicer
 }
 
 function requiresReturnResult(o) {
